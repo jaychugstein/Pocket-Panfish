@@ -11,9 +11,11 @@ By **jaychugstein** · MIT License · Arduboy FX / FX-C (uses the FX flash chip)
 
 **Play it in your browser:** https://jaychugstein.github.io/Pocket-Panfish/ (works on phones too)
 
-![](images/screenshot1.png) ![](images/screenshot-larry.png)
-![](images/screenshot3.png) ![](images/screenshot4.png)
-![](images/screenshot5.png) ![](images/screenshot6.png)
+<table>
+<tr><td><img src="images/screenshot1.png" width="384"></td><td><img src="images/screenshot-larry.png" width="384"></td></tr>
+<tr><td><img src="images/screenshot3.png" width="384"></td><td><img src="images/screenshot4.png" width="384"></td></tr>
+<tr><td><img src="images/screenshot5.png" width="384"></td><td><img src="images/screenshot6.png" width="384"></td></tr>
+</table>
 
 ## Controls
 
