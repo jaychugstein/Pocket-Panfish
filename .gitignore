@@ -1,0 +1,5 @@
+build/
+backup_tomy/
+art/__pycache__/
+art/*.npy
+art/*.pkl

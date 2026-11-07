@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 3,
+  "title": "Pocket Panfish",
+  "description": "Loony Larry the loon needs one of each of the 7 kinds of fish in Lake Huron to win the big fishing derby. Row the lake, drop your line and hook each fish by the head, while dodging sunken logs, snapping turtles and line-cutting gar. Every fish reacts to your lure its own way. Saves your best score and your heaviest fish of each kind.",
+  "author": "jaychugstein",
+  "version": "1.0.0",
+  "date": "2026-11-06",
+  "genre": "Sports",
+  "license": "MIT",
+  "sourceUrl": "https://github.com/jaychugstein/Pocket-Panfish",
+  "binaries": [
+    {
+      "title": "Pocket Panfish",
+      "filename": "PocketPanfish.hex",
+      "device": "ArduboyFX",
+      "flashdata": "PocketPanfish-fxdata.bin",
+      "flashsave": "PocketPanfish-fxsave.bin",
+      "cartimage": "title.png",
+      "titleimage": "title.png"
+    }
+  ]
+}
