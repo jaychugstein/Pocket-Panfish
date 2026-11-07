@@ -11,7 +11,7 @@ By **jaychugstein** · MIT License · Arduboy FX / FX-C (uses the FX flash chip)
 
 **Play it in your browser:** https://jaychugstein.github.io/Pocket-Panfish/ (works on phones too)
 
-![](images/screenshot1.png) ![](images/screenshot2.png)
+![](images/screenshot1.png) ![](images/screenshot-larry.png)
 ![](images/screenshot3.png) ![](images/screenshot4.png)
 ![](images/screenshot5.png) ![](images/screenshot6.png)
 
