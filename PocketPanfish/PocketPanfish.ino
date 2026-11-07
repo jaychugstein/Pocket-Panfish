@@ -538,7 +538,7 @@ void talkScreen() {                                            // Loony Larry ta
   FX::drawBitmap(0, 0, FX_LARRY, shown < 60 ? pgm_read_byte(PSTR("\1\2\1\0") + ((stT >> 2) & 3)) : 3, dbmNormal);   // beak flapping as he talks, then a grin
   for (uint8_t l = 0; l < 5; l++) {
     FX::readDataBytes(FX_TALK + (page * 5 + l) * 12, (uint8_t*)ln, 12); at(51, 5 + l * 11);
-    bool hi = page == 1 && l == 1;                               // TOP CORNER: black letters on a white bar
+    bool hi = page == 1 && l == 1;                               // EACH SPECIES: black letters on a white bar
     for (uint8_t k = 0; k < 12; k++) { char c = ln[k]; if (n == shown - 1) cur = c; if (n++ < shown) {
       if (hi && (c != ' ' || (k && k < 11 && ln[k - 1] != ' ' && ln[k + 1] != ' '))) { ab.fillRect(tx_ - 1, ty_ - 1, 7, 9, WHITE); tc_ = BLACK; }
       pc(c); tc_ = WHITE; } }

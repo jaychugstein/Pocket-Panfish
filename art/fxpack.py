@@ -18,7 +18,7 @@ spr = bytearray(); offs = []; ws = []; hs = []
 for k in a['order']:
     offs.append(len(spr)); f = a['spr'][k]; ws.append(f[0][0].shape[1]); hs.append(f[0][0].shape[0]); spr += sprite(f)
 TALK = [["HOWDY! I'M", "LOONY LARRY.", "I LIFT", "LUNKERS FOR", "A LIVIN'!"],
-        ["ONE OF EACH!", "TOP CORNER", "SHOWS THE", "REMAINING", "SPECIES."],
+        ["CATCH ONE OF", "EACH SPECIES", "TO WIN! THE", "CORNER SHOWS", "WHAT'S LEFT."],
         ["", "OOOO-WEE!", "WE WON THE", "DERBY!", ""],
         ["", "AW SHUCKS.", "ALL OUTTA", "LINE. TRY", "AGAIN!"]]
 NAMES = ['', 'PUMPKINSEED', 'PERCH', 'LARGEMOUTH BASS', 'WALLEYE', 'LAKE TROUT', 'CATFISH', 'NORTHERN PIKE', 'LONGNOSE GAR', 'CRAWFISH', 'OLD BOOT', 'TREASURE CHEST']
