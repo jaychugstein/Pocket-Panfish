@@ -421,7 +421,7 @@ void drawLake(int16_t sy) {
   for (uint8_t i = 0; i < 34; i++) {                         // stars, drifting slowly as you row, each twinkling in its own time
     uint8_t h = i * 97 + 31, y = (uint8_t)(i * 7 + (h >> 4)) % 11;
     int16_t x = (int16_t)(i * 61 + h) % 192 - (int16_t)(camx / 4); x = ((x % 192) + 192) % 192;
-    if (x > 127 || (x < 56 && y < 8)) continue;               // (not behind the score)
+    if (x > 127 || (x < 56 && y < 8) || (x < 14 && y < 14)) continue;   // (not behind the score or the streak)
     uint8_t ph = (uint8_t)(tick + h * 3) & 127;
     if (ph < 6 && (i & 3)) continue;                          // a quick blink off
     if (i % 5 == 0 && ph > 112) {                             // the bright ones flare into a little sparkle
@@ -507,7 +507,7 @@ void drawPlay() {
   sm_ = true; at(1, 1); pn(score);                             // the score, in small digits
   { int16_t hx0 = nlen(score) * 4 + 3;                         // line left (little hooks) and your streak, along the top after the score
     for (uint8_t i = 0; i < lines; i++) { int16_t x = hx0 + i * 5; ab.drawRect(x + 1, 0, 3, 3, WHITE); ab.drawFastVLine(x + 2, 3, 4, WHITE); ab.drawPixel(x + 1, 7, WHITE); ab.drawFastVLine(x, 5, 2, WHITE); }   // each hook: eyelet, shank, bend and point
-    if (combo > 1) { at(hx0 + lines * 5 + 2, 1); pc('X'); pn(combo); } sm_ = false; }
+    if (combo > 1) { at(1, 7); pc('X'); pn(combo); } sm_ = false; }   // your streak, under the score
   at(128 - (nlen(caught) + 3) * 6, 15); pn(caught); pc('/'); pn(DERBY);   // the derby: how many of Larry's fish so far (under the card)
   spr(126 - sw(want), 1, want, 2 + ((tick >> 4) & 1));        // a fish you still need, top right, drawn straight over the sky
   if (popT) { popT--; int16_t y = popY - (45 - popT) / 4; int16_t w = (nlen(popV < 0 ? -popV : popV) + 1) * 6; int16_t x = SX(popX) - w / 2; if (x < 0) x = 0; if (x + w > 127) x = 127 - w;
