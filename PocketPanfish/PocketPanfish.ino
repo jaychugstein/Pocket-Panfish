@@ -523,9 +523,15 @@ void drawPlay() {
 // ---------------------------------------------------------------- screens
 const uint16_t WINSONG[] PROGMEM = { 523, 110, 659, 110, 784, 110, 1047, 220, 0, 60, 784, 110, 1047, 450, TONES_END };
 const uint16_t LOSESONG[] PROGMEM = { 392, 260, 370, 260, 349, 260, 330, 600, TONES_END };
-void titleScreen() {                                           // the logo and a frying pan flipping a pumpkinseed; PRESS A blinks
-  FX::drawBitmap(0, 0, FX_LOGO, (tick >> 3) & 7, dbmNormal);
-  if (stT == 20) snd.tones(WINSONG);                          // a fanfare to start (the same one as winning the derby)   // 8 frames of the flip
+void titleScreen() {                                           // underwater: weed sways, fish swim by behind the words, a hook dangles beside them
+  FX::drawBitmap(0, 0, FX_TBG, (uint8_t)stT >> 3 & 7, dbmNormal);
+  for (uint8_t i = 0; i < 3; i++) {                            // the lake's fish swim by behind the words, a different kind each time
+    uint16_t p = (stT * (2 + i) >> 2) + (i << 6); uint8_t k = K_SUN + ((p >> 8) * 3 + i & 7); int16_t x = (uint8_t)p - 64;
+    if (i & 1) x = 95 - x;                                       // (the middle one swims the other way)
+    spr(x, 4 + i * 13, k, (i << 1 & 2) | ((uint8_t)stT >> 3 & 1));
+  }
+  FX::drawBitmap(64 - TLOGO_W / 2, 3, FX_TLOGO, 0, dbmMasked); // POCKET PANFISH (the hook on its line and the PRESS sign are in the picture)
+  if (stT == 20) snd.tones(WINSONG);                          // a fanfare to start (the same one as winning the derby)
   if (AB_JUST) { randomSeed(micros()); st = S_SOUND; stT = 0; }
 }
 void soundScreen() {                                           // up / down turns the sound on or off; A or B goes on

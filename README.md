@@ -22,14 +22,14 @@ By **jaychugstein** · MIT License · Arduboy FX / FX-C (uses the FX flash chip)
 | Button | What it does |
 |---|---|
 | Left / Right | Row along the lake |
-| A or B (hold) | Let your line down. It stays down while you hold |
+| B or A (hold) | Let your line down. It stays down while you hold |
 | Let go | Reel in |
-| A or B (again, while reeling) | Drop it back down, to bob the lure |
+| B or A (again, while reeling) | Drop it back down, to bob the lure |
 | Up / Down | Sound on or off (sound screen) |
-| A or B | Next screen · finish Larry's sentence |
+| B or A | Next screen · finish Larry's sentence |
 | Right / Left | Fish again / back to the title (score screen) |
 
-A and B do the same thing.
+B (the outer button) is the main button, and the game shows B wherever it names one. A does the same thing.
 
 ## How to fish
 
@@ -91,8 +91,9 @@ The ready-made files are in [`release/`](release/):
   upload tools) for development.
 - **Command line:** `build.sh` builds `build/PocketPanfish.hex` with avr-gcc
   (set the library paths at the top).
-- **Art:** the pictures are drawn by the Python scripts in `art/`. Run `art.py`,
-  `gord.py` and `gordtitle.py`, then `fxpack.py`, which writes `fxdata.h` and the FX data.
+- **Art:** the pictures are drawn by the Python scripts in `art/`. Run `titlea.py`,
+  `art.py`, `gord.py`, `gordtitle.py` and `title2.py` (the underwater title and sound screens), then `fxpack.py`,
+  which writes `fxdata.h` and the FX data.
 
 The web player in `docs/` uses [Ardens](https://github.com/tiberiusbrown/arduboy_emulator)
 by tiberiusbrown (see `docs/ARDENS_LICENSE.txt`).
