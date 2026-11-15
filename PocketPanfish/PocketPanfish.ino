@@ -15,16 +15,12 @@ ArduboyTones snd(ab.audio.enabled);
 #define AB_HELD (ab.pressed(A_BUTTON) || ab.pressed(B_BUTTON))
 
 // ---------------------------------------------------------------- text (5x7 font from the FX chip)
-int16_t tx_, ty_; uint8_t tc_ = WHITE;
+int16_t tx_, ty_; uint8_t tc_ = WHITE; bool sm_;
 void at(int16_t x, int16_t y) { tx_ = x; ty_ = y; }
 void pc(char c) {
-  if (c == '[' || c == ']') {                                  // a d-pad key with an arrow
-    uint8_t k = tc_, bg = tc_ == WHITE ? BLACK : WHITE; ab.fillRect(tx_, ty_, 7, 7, k); ab.drawPixel(tx_, ty_, bg); ab.drawPixel(tx_ + 6, ty_, bg); ab.drawPixel(tx_, ty_ + 6, bg); ab.drawPixel(tx_ + 6, ty_ + 6, bg);
-    for (uint8_t i = 0; i < 3; i++) ab.drawFastVLine(c == '[' ? tx_ + 2 + i : tx_ + 4 - i, ty_ + 3 - i, 1 + 2 * i, bg);
-    tx_ += 8; return;
-  }
-  uint8_t g = (c >= 32 && c <= 90) ? c - 32 : 0, gl[5]; FX::readDataBytes(FX_FONT + g * 5, gl, 5);
-  for (uint8_t i = 0; i < 6; i++, tx_++) { uint8_t b = i < 5 ? gl[i] : 0; for (uint8_t j = 0; j < 7; j++) if (b >> j & 1) ab.drawPixel(tx_, ty_ + j, tc_); }
+  uint8_t g = (c >= 32 && c <= 90) ? c - 32 : 0, gl[5], n = sm_ ? 3 : 5;   // sm_: the small 3x5 digits (and X) for the score along the top
+  FX::readDataBytes(sm_ ? FX_TINY + (c == 'X' ? 30 : (c - '0') * 3) : FX_FONT + g * 5, gl, n);
+  for (uint8_t i = 0; i <= n; i++, tx_++) { uint8_t b = i < n ? gl[i] : 0; for (uint8_t j = 0; j < 7; j++) if (b >> j & 1) ab.drawPixel(tx_, ty_ + j, tc_); }
 }
 uint8_t nlen(uint32_t v) { uint8_t n = 1; while (v >= 10) { v /= 10; n++; } return n; }
 void pn(uint32_t v) { char b[10]; uint8_t n = 0; do { b[n++] = '0' + v % 10; v /= 10; } while (v); while (n) pc(b[--n]); }
@@ -414,7 +410,7 @@ void updateBoat() {
   if (bvx > top) bvx = top; if (bvx < -top) bvx = -top;
   if (!lineWet()) { if (L && !R) bleft = true; if (R && !L) bleft = false; }   // the rod swaps sides only when the line is in
   bx += bvx; if (bx < DOCK_END + 16) { bx = DOCK_END + 16; bvx = 0; }   // (bumps up against the dock)
-  if (bx > WORLD - 18) { bx = WORLD - 18; bvx = 0; }
+  if (bx > WORLD - 52) { bx = WORLD - 52; bvx = 0; }   // (far end: Larry stops short of the fish card and the count)
   float w = bx - 64; if (w < 0) w = 0; if (w > WORLD - 128) w = WORLD - 128;
   camx += (w - camx) * 0.15f;
 }
@@ -508,10 +504,10 @@ void drawPlay() {
   spr(bsx - 15, boy, K_BOAT, (bleft ? 2 : 0) + bf);
   if (spT) { spT--; int8_t r = (16 - spT) / 3; int16_t x = SX(spX), y = SURF - 1 - (spT > 8) + sy; ab.drawPixel(x - r - 1, y, WHITE); ab.drawPixel(x + r + 1, y, WHITE); ab.drawPixel(x - r, y - 1, WHITE); ab.drawPixel(x + r, y - 1, WHITE); }   // splash
   // score, line left, combo, and the fish wanted next
-  at(0, 0); pn(score);
-  { int16_t hx0 = nlen(score) * 6 + 2;                         // line left (little hooks) and your streak, along the top after the score
+  sm_ = true; at(1, 1); pn(score);                             // the score, in small digits
+  { int16_t hx0 = nlen(score) * 4 + 3;                         // line left (little hooks) and your streak, along the top after the score
     for (uint8_t i = 0; i < lines; i++) { int16_t x = hx0 + i * 5; ab.drawRect(x + 1, 0, 3, 3, WHITE); ab.drawFastVLine(x + 2, 3, 4, WHITE); ab.drawPixel(x + 1, 7, WHITE); ab.drawFastVLine(x, 5, 2, WHITE); }   // each hook: eyelet, shank, bend and point
-    if (combo > 1) { at(hx0 + lines * 5 + 2, 0); pc('X'); pn(combo); } }
+    if (combo > 1) { at(hx0 + lines * 5 + 2, 1); pc('X'); pn(combo); } sm_ = false; }
   at(128 - (nlen(caught) + 3) * 6, 15); pn(caught); pc('/'); pn(DERBY);   // the derby: how many of Larry's fish so far (under the card)
   spr(126 - sw(want), 1, want, 2 + ((tick >> 4) & 1));        // a fish you still need, top right, drawn straight over the sky
   if (popT) { popT--; int16_t y = popY - (45 - popT) / 4; int16_t w = (nlen(popV < 0 ? -popV : popV) + 1) * 6; int16_t x = SX(popX) - w / 2; if (x < 0) x = 0; if (x + w > 127) x = 127 - w;
@@ -583,7 +579,7 @@ void doneScreen() {
     if ((newRec >> k & 1) && (stT & 16)) { at(66 + sw(k) / 2, 37); pt(T_RECORD); }   // the heaviest you've ever landed
     int16_t w = (pt(k, false) + 5 + nlen(lb / 10)) * 6; at(64 - w / 2, 47); pt(k); pc(' '); pw(lb); }
   ab.drawFastHLine(0, 55, 128, WHITE);
-  at(4, 57); pc('['); pt(T_TITLE); at(74, 57); pt(T_AGAIN); pc(']');
+  FX::drawBitmap(0, 56, FX_BAR, 0, dbmNormal);                 // [< TITLE]  [AGAIN >]
   if (stT > 30) {
     if (AB_JUST || ab.justPressed(RIGHT_BUTTON)) { newGame(); st = S_PLAY; stT = 0; }
     if (ab.justPressed(LEFT_BUTTON)) { st = S_TITLE; stT = 0; }

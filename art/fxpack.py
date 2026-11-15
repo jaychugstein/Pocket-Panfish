@@ -27,6 +27,30 @@ MSGS = [('OUT', 'OUT OF LINE!'), ('BOOT', 'OLD BOOT!'), ('ALREADY', 'ALREADY GOT
         ('LINE', '+1 LINE'), ('HOLD', 'HOLD B TO DROP LINE'), ('WON', 'DERBY WON!'), ('SCORE', 'SCORE'), ('NEWBEST', 'NEW BEST!'), ('BEST', 'BEST '),
         ('LB', 'LB'), ('TITLE', ' TITLE'), ('AGAIN', 'AGAIN '), ('RECORD', 'RECORD!')]
 TS = 20
+TG = {'0': ['XXX', 'X.X', 'X.X', 'X.X', 'XXX'], '1': ['.X.', 'XX.', '.X.', '.X.', 'XXX'], '2': ['XXX', '..X', 'XXX', 'X..', 'XXX'],
+      '3': ['XXX', '..X', '.XX', '..X', 'XXX'], '4': ['X.X', 'X.X', 'XXX', '..X', '..X'], '5': ['XXX', 'X..', 'XXX', '..X', 'XXX'],
+      '6': ['XXX', 'X..', 'XXX', 'X.X', 'XXX'], '7': ['XXX', '..X', '.X.', '.X.', '.X.'], '8': ['XXX', 'X.X', 'XXX', 'X.X', 'XXX'],
+      '9': ['XXX', 'X.X', 'XXX', '..X', 'XXX'], 'X': ['...', 'X.X', '.X.', 'X.X', '...']}
+def _bar():
+    fnt = [int(v) for v in re.search(r'\{([^}]*)\}', open(os.path.join(ART, 'font.h')).read()).group(1).split(',')]
+    b = np.zeros((8, 128), bool)
+    def txt(s, x):
+        for c in s:
+            for i in range(5):
+                col = fnt[(ord(c) - 32) * 5 + i]
+                for j in range(7):
+                    if col >> j & 1: b[1 + j, x + i] = True
+            x += 6
+        return x
+    def key(x, left):                                       # a d-pad key with an arrow (white, rounded, arrow cut out)
+        b[1:8, x:x + 7] = True; b[1, x] = b[1, x + 6] = b[7, x] = b[7, x + 6] = False
+        for i in range(3):
+            cx = x + 2 + i if left else x + 4 - i
+            b[1 + 3 - i:1 + 3 - i + 1 + 2 * i, cx] = False
+    key(4, True); txt(' TITLE', 12); x = txt('AGAIN ', 74); key(x, False)
+    return b
+BAR = _bar()
+TINY = [sum(1 << r for r in range(5) if TG[c][r][i] == 'X') for c in '0123456789X' for i in range(3)]
 def ttext():                                               # every bit of text the game shows, 20 bytes a slot: the fish names (by kind), then the messages
     out = bytearray()
     for t in NAMES + [m for _, m in MSGS]: assert len(t) < TS, t; out += t.encode().ljust(TS, b'\0')
@@ -47,6 +71,8 @@ parts = [('FX_SPR', bytes(spr), 'the sprites (boat = Larry): ' + ', '.join(a['or
          ('FX_THOOK', sprite([tuple(np.load(os.path.join(ART, 'titlehook.npy')))]), 'the hook dangling beside the words (masked)'),
          ('FX_SOUND', sprite([(t,) for t in np.load(os.path.join(ART, 'soundscr.npy'))], False), 'the sound screen, 2 frames: ON, OFF'),
          ('FX_TEXT', ttext(), 'the words: fish names by kind, then the messages (20 bytes each, see the T_ numbers)'),
+         ('FX_BAR', sprite([(BAR,)], False), 'the score screen\'s bottom line: [< TITLE] and [AGAIN >] (rows 56-63)'),
+         ('FX_TINY', bytes(TINY), 'small 3x5 digits 0-9 then X, 3 bytes each (columns, bit 0 at the top), for the score'),
          ('FX_FONT', bytes(int(v) for v in re.search(r'\{([^}]*)\}', open(os.path.join(ART, 'font.h')).read()).group(1).split(',')), 'the 5x7 font (5 bytes a letter, from space)')]
 data = bytearray(); hdr = []
 for name, blob, note in parts:
