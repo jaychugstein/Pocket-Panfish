@@ -524,9 +524,9 @@ void drawPlay() {
 const uint16_t WINSONG[] PROGMEM = { 523, 110, 659, 110, 784, 110, 1047, 220, 0, 60, 784, 110, 1047, 450, TONES_END };
 const uint16_t LOSESONG[] PROGMEM = { 392, 260, 370, 260, 349, 260, 330, 600, TONES_END };
 void titleScreen() {                                           // underwater: weed sways, fish swim by behind the words, a hook dangles beside them
-  FX::drawBitmap(0, 0, FX_TBG, (uint8_t)stT >> 3 & 7, dbmNormal);
+  FX::drawBitmap(0, 0, FX_TBG, (uint8_t)stT >> 4 & 7, dbmNormal);   // (a new frame of the weed every 16 ticks)
   for (uint8_t i = 0; i < 3; i++) {                            // the lake's fish swim by behind the words, a different kind each time
-    uint16_t p = (stT * (2 + i) >> 2) + (i << 6); uint8_t k = K_SUN + ((p >> 8) * 3 + i & 7); int16_t x = (uint8_t)p - 64;
+    uint16_t p = (stT * (2 + i) >> 3) + (i << 6); uint8_t k = K_SUN + ((p >> 8) * 3 + i & 7); int16_t x = (uint8_t)p - 64;
     if (i & 1) x = 95 - x;                                       // (the middle one swims the other way)
     spr(x, 4 + i * 13, k, (i << 1 & 2) | ((uint8_t)stT >> 3 & 1));
   }

@@ -88,14 +88,14 @@ def text5(s, txt, x, y):
                 if col >> j & 1: s[y + j, x + i] = True
         x += 6
 def sign(s, pushed):
-    x0, y0, w, h = 40, 44, 49, 14
+    x0, y0, w, h = 40, 42, 49, 14
     im = Image.new('L', (128, 64), 0); d = ImageDraw.Draw(im)
     d.rounded_rectangle([x0, y0, x0 + w - 1, y0 + h - 1], radius=3, fill=0, outline=255)
     a = np.asarray(im) > 127; reg = np.zeros_like(a); reg[y0:y0 + h, x0:x0 + w] = True
     inside = nd.binary_fill_holes(a) & reg
     s[inside] = False; s |= a
-    text5(s, 'PRESS', 44, 48)
-    cx, cy = 81, 51
+    text5(s, 'PRESS', 44, 46)
+    cx, cy = 81, 49
     yy, xx = np.mgrid[0:64, 0:128]; dd = np.hypot(xx - cx, yy - cy)
     s |= (dd > 3.5) & (dd < 4.5)                                   # the ring
     c = cy if pushed else cy - 1
@@ -114,19 +114,15 @@ m = mask; prev[3:3 + H, lx:lx + W][m] = logo[m]
 Image.fromarray((prev * 255).astype(np.uint8)).resize((512, 256), Image.NEAREST).save('title2_preview.png')
 print('logo', logo.shape)
 
-# ---- the sound screen, 2 frames (ON, OFF): the same water and weed, SOUND in the lettering, and the hook hanging beside
-# the choice; the chosen word is solid, the other just an outline
+# ---- the sound screen, 2 frames (ON, OFF): the same water and weed, SOUND in the lettering; the chosen word is solid,
+# the other just an outline
 def sound(on):
     s = frame(0)
     words = [('ON', 29), ('OFF', 45)]
-    for k, (t, y) in enumerate(words):                             # the hook hangs down beside the choice, on its line (behind SOUND)
-        w = word(t, 11, 3, 2); x = (128 - w.shape[1]) // 2 + 6
-        if (k == 0) == on:
-            hx = x - 13; hy = y - 1; s[0:hy, hx + 6] = True; hm = nd.binary_dilation(hook); rr = s[hy:hy + 15, hx:hx + 9]; rr[hm] = hook[hm]
     sd = word('SOUND', 15, 3, 1); ys = 6; xs = (128 - sd.shape[1]) // 2
     m = nd.binary_dilation(sd, np.ones((3, 3))); r = s[ys:ys + sd.shape[0], xs:xs + sd.shape[1]]; r[m] = sd[m]
     for k, (t, y) in enumerate(words):
-        w = word(t, 11, 3, 2); x = (128 - w.shape[1]) // 2 + 6
+        w = word(t, 11, 3, 2); x = (128 - w.shape[1]) // 2
         g = w if (k == 0) == on else (w & ~nd.binary_erosion(w))
         m = nd.binary_dilation(w, np.ones((3, 3))); r = s[y:y + w.shape[0], x:x + w.shape[1]]; r[m] = g[m]
     return s
