@@ -39,13 +39,25 @@ def word(t, cap, stroke, gap):
     out = np.zeros((H, W), bool); x = 0
     for g in gs: out[:g.shape[0], x:x + g.shape[1]] = g; x += g.shape[1] + gap
     return out
-# the logo: POCKET over PANFISH, centred on each other, with a black edge so nothing behind runs into the letters
-pk = word('POCKET', 9, 2, 2); pf = word('PANFISH', 19, 4, 1)
-W = pf.shape[1] + 4; H = 14 + pf.shape[0] + 4
-logo = np.zeros((H, W), bool)
-logo[1:1 + pk.shape[0], (W - pk.shape[1]) // 2:(W - pk.shape[1]) // 2 + pk.shape[1]] |= pk
-logo[14:14 + pf.shape[0], 2:2 + pf.shape[1]] |= pf   # (a clear gap under POCKET)
-mask = nd.binary_dilation(logo, np.ones((3, 3)))
+# the logo: POCKET over PANFISH, centred, in fun hollow bubble letters: fat round strokes with only their outline kept, so
+# each letter is white edged and black inside. The letters bob up and down a little and squish into each other, each one
+# sitting on top of the one before. The mask is the whole filled shape (the gaps between letters too), a pixel wider, so
+# the fish swimming behind never show through.
+CR = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], bool)
+def bubble(t, cap, stroke, step, bounce):
+    gs = [np.pad(glyph(c, cap, stroke), 1) for c in t]; b0 = max(abs(b) for b in bounce)
+    H = max(g.shape[0] for g in gs) + 2 * b0; W = sum(g.shape[1] for g in gs) + step * (len(gs) - 1)
+    fill = np.zeros((H, W), bool); edge = np.zeros((H, W), bool); x = 0
+    for i, g in enumerate(gs):
+        y = b0 + bounce[i % len(bounce)]; f = np.zeros_like(fill); f[y:y + g.shape[0], x:x + g.shape[1]] = g
+        edge &= ~f; edge |= f & ~nd.binary_erosion(f, CR); fill |= f; x += g.shape[1] + step
+    ys, xs = np.where(fill); return fill[ys.min():ys.max() + 1, xs.min():xs.max() + 1], edge[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+pk, pf = bubble('POCKET', 10, 3, 0, [0, -1, 1, 0]), bubble('PANFISH', 15, 5, -1, [0, -1, 1, 0, -1, 1, 0])
+W = max(pk[0].shape[1], pf[0].shape[1]) + 4; H = pk[0].shape[0] + 1 + pf[0].shape[0] + 3
+logo = np.zeros((H, W), bool); fill = np.zeros((H, W), bool)
+for (f, e), y in ((pk, 1), (pf, 2 + pk[0].shape[0])):
+    x = (W - f.shape[1]) // 2; r = logo[y:y + f.shape[0], x:x + f.shape[1]]; r &= ~f; r |= e; fill[y:y + f.shape[0], x:x + f.shape[1]] |= f
+mask = nd.binary_dilation(nd.binary_closing(np.pad(fill, 6), np.ones((7, 11)))[6:-6, 6:-6] | fill, np.ones((3, 3)))
 np.save('titlelogo.npy', np.stack([logo, mask]))
 # ---- the hook: eye, shank, bend, point and barb (the game draws its line)
 im = Image.new('L', (9 * K, 15 * K), 0); d = ImageDraw.Draw(im)

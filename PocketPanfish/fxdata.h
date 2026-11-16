@@ -10,17 +10,17 @@ constexpr uint24_t FX_LARRY  = 0x00124C;   // Loony Larry and his speech bubble,
 constexpr uint24_t FX_TALK   = 0x002250;   // what Larry says: 4 pages of 5 lines, 12 letters each (intro x2, won, lost)
 constexpr uint24_t FX_TBG    = 0x002340;   // the title screen underwater: surface, swaying weed and sand, 8 frames
 constexpr uint24_t FX_TLOGO  = 0x004344;   // the POCKET PANFISH lettering (masked)
-constexpr uint24_t FX_TBUB   = 0x0046CC;   // a rising bubble, 3 sizes (masked: see-through around it)
-constexpr uint24_t FX_THOOK  = 0x0046EE;   // the hook dangling beside the words (masked)
-constexpr uint24_t FX_SOUND  = 0x004716;   // the sound screen, 2 frames: ON, OFF
-constexpr uint24_t FX_TEXT   = 0x004F1A;   // the words: fish names by kind, then the messages (20 bytes each, see the T_ numbers)
-constexpr uint24_t FX_BAR    = 0x005186;   // the score screen's bottom line: [< TITLE] and [AGAIN >] (rows 56-63)
-constexpr uint24_t FX_TINY   = 0x00520A;   // small 3x5 digits 0-9 then X, 3 bytes each (columns, bit 0 at the top), for the score
-constexpr uint24_t FX_FONT   = 0x00522B;   // the 5x7 font (5 bytes a letter, from space)
+constexpr uint24_t FX_TBUB   = 0x004668;   // a rising bubble, 3 sizes (masked: see-through around it)
+constexpr uint24_t FX_THOOK  = 0x00468A;   // the hook dangling beside the words (masked)
+constexpr uint24_t FX_SOUND  = 0x0046B2;   // the sound screen, 2 frames: ON, OFF
+constexpr uint24_t FX_TEXT   = 0x004EB6;   // the words: fish names by kind, then the messages (20 bytes each, see the T_ numbers)
+constexpr uint24_t FX_BAR    = 0x005122;   // the score screen's bottom line: [< TITLE] and [AGAIN >] (rows 56-63)
+constexpr uint24_t FX_TINY   = 0x0051A6;   // small 3x5 digits 0-9 then X, 3 bytes each (columns, bit 0 at the top), for the score
+constexpr uint24_t FX_FONT   = 0x0051C7;   // the 5x7 font (5 bytes a letter, from space)
 const uint16_t SPROFS[] PROGMEM = {0,484,744,1068,1424,1796,2168,2556,3008,3268,3384,3548,3792,4148};
 const uint8_t SPRW[] PROGMEM = {30,16,20,22,23,23,24,28,32,14,10,15,22,9};
 const uint8_t SPRH[] PROGMEM = {16,12,12,11,10,11,10,9,7,7,10,10,9,8};
 constexpr uint8_t WRECK_W = 54, WRECK_H = 24;
-constexpr uint8_t TLOGO_W = 90, TLOGO_H = 37;
+constexpr uint8_t TLOGO_W = 80, TLOGO_H = 33;
 enum { T_OUT = 12, T_BOOT = 13, T_ALREADY = 14, T_PIKEGOT = 15, T_BASSGOT = 16, T_GARGOT = 17, T_SNAG = 18, T_GARCUT = 19, T_TURTLE = 20, T_LINE = 21, T_HOLD = 22, T_WON = 23, T_SCORE = 24, T_NEWBEST = 25, T_BEST = 26, T_LB = 27, T_TITLE = 28, T_AGAIN = 29, T_RECORD = 30 };   // the messages in FX_TEXT (a fish kind is its own name)
 constexpr uint8_t TEXT_SLOT = 20;

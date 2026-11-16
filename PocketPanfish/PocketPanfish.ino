@@ -11,8 +11,12 @@
 Arduboy2Base ab;
 ARDUBOY_NO_USB                             // saves ~3 KB, like most cart games (press reset to upload something else)
 ArduboyTones snd(ab.audio.enabled);
-#define AB_JUST (ab.justPressed(A_BUTTON) || ab.justPressed(B_BUTTON))   // A and B do exactly the same thing
+__attribute__((noinline)) bool abJust() { return ab.justPressed(A_BUTTON) || ab.justPressed(B_BUTTON); }   // A and B do exactly the same thing
+#define AB_JUST abJust()
 #define AB_HELD (ab.pressed(A_BUTTON) || ab.pressed(B_BUTTON))
+// (random() wants 32-bit numbers, which costs a lot of code at every call: these take 16-bit ones and give exactly the same results)
+__attribute__((noinline)) int16_t rnd(int16_t n) { return random(n); }
+__attribute__((noinline)) int16_t rnd(int16_t lo, int16_t hi) { return random(lo, hi); }
 
 // ---------------------------------------------------------------- text (5x7 font from the FX chip)
 int16_t tx_, ty_; uint8_t tc_ = WHITE; bool sm_;
@@ -53,6 +57,7 @@ const uint8_t WEIGHT[] PROGMEM = { 0, 1, 1, 2, 3, 3, 3, 3, 4, 1, 1, 5 };       /
 const uint8_t SWIM[] PROGMEM = { 0, 12, 9, 8, 5, 14, 4, 7, 11, 3, 0, 0 };     // swimming speed, 32nds of a pixel a frame
 const uint8_t BAND[][2] PROGMEM = { { 0, 0 }, { 18, 30 }, { 22, 36 }, { 28, 42 }, { 36, 48 }, { 46, 55 }, { 55, 57 }, { 30, 46 }, { 17, 26 }, { BED - 3, BED - 3 }, { BED - 4, BED - 4 }, { BED - 4, BED - 4 } };   // how deep each kind swims
 
+int16_t bandDepth(uint8_t k) { return rnd(pgm_read_byte(&BAND[k][0]), pgm_read_byte(&BAND[k][1]) + 1); }   // a depth this kind likes
 void spr(int16_t x, int16_t y, uint8_t k, uint8_t f) { FX::drawBitmap(x, y, FX_SPR + pgm_read_word(SPROFS + k), f, dbmMasked); }
 uint8_t sw(uint8_t k) { return pgm_read_byte(SPRW + k); }
 uint8_t sh(uint8_t k) { return pgm_read_byte(SPRH + k); }
@@ -95,6 +100,7 @@ bool lineWet() { return lineSt != L_IDLE || lineLen > 0; }
 bool lureMoving() { return lineWet() && (fabs(hvx) > 0.12f || fabs(hvy) > 0.3f || (lineSt == L_DOWN && lineLen < 40 && (tick & 1))); }   // a lure being dragged, bobbed or dropping
 void pop(int32_t v) { popV = v; popT = 45; popX = lineX(); popY = SURF - 10; }
 void addScore(int32_t v) { if (v < 0 && (uint32_t)(-v) > score) score = 0; else score += v; }
+void lose100() { combo = 0; wantRun = 0; addScore(-100); pop(-100); }   // a fish lost or a wasted one: it costs points and your streak
 
 void splash(int16_t x) { spX = x; spT = 16; }
 bool touching(Fish& f) {                                       // is the hook on this one? only the head counts (its mouth end)
@@ -123,45 +129,45 @@ bool crowded(Fish& me, float x, float y) {                     // would another 
 }
 void pickTarget(Fish& f) {
   for (uint8_t tries = 0; tries < 4; tries++) {                // somewhere to go that isn't already taken, so they spread out
-    int16_t d = f.k == K_GAR ? random(120, 260) : f.k == K_SUN ? random(10, 40) : f.k == K_CRAW ? random(6, 30) : random(20, 110);
-    f.tx = f.x + (random(2) ? d : -d);
-    if (f.tx < 8) f.tx = 8 + random(40); if (f.tx > WORLD - 8) f.tx = WORLD - 8 - random(40);
+    int16_t d = f.k == K_GAR ? rnd(120, 260) : f.k == K_SUN ? rnd(10, 40) : f.k == K_CRAW ? rnd(6, 30) : rnd(20, 110);
+    f.tx = f.x + (rnd(2) ? d : -d);
+    if (f.tx < 8) f.tx = 8 + rnd(40); if (f.tx > WORLD - 8) f.tx = WORLD - 8 - rnd(40);
     if (f.k == K_CRAW && f.tx > ROOF_X0 - 8 && f.tx < ROOF_X1 + 8) f.tx = f.x;
-    f.ty = random(pgm_read_byte(&BAND[f.k][0]), pgm_read_byte(&BAND[f.k][1]) + 1);
+    f.ty = bandDepth(f.k);
     if (!crowded(f, f.tx, f.ty)) break;
   }
-  f.t = f.k == K_CAT ? random(60, 200) : f.k == K_PIKE ? random(150, 320) : f.k == K_SUN ? random(10, 40)
-      : f.k == K_GAR ? random(5, 30) : f.k == K_CRAW ? random(30, 150) : random(30, 110);   // a pause before it sets off
+  f.t = f.k == K_CAT ? rnd(60, 200) : f.k == K_PIKE ? rnd(150, 320) : f.k == K_SUN ? rnd(10, 40)
+      : f.k == K_GAR ? rnd(5, 30) : f.k == K_CRAW ? rnd(30, 150) : rnd(30, 110);   // a pause before it sets off
 }
 uint8_t countK(uint8_t k) { uint8_t n = 0; for (auto& f : fish) if (f.st != F_GONE && f.k == k) n++; return n; }
 uint8_t countAll() { uint8_t n = 0; for (auto& f : fish) if (f.st != F_GONE && f.k <= K_PIKE) n++; return n; }
 int8_t freeSlot() { for (uint8_t i = 0; i < NF; i++) if (fish[i].st == F_GONE) return i; return -1; }
 int8_t addFish(uint8_t k, int8_t lead) {
   int8_t i = freeSlot(); if (i < 0) return -1; Fish& f = fish[i];
-  f.k = k; f.st = F_SWIM; f.left = random(2); f.lead = 255;
-  f.sz = 4 + random(5) + (random(6) ? 0 : random(3, 7));      // mostly ordinary, now and then a real lunker
-  f.y = random(pgm_read_byte(&BAND[k][0]), pgm_read_byte(&BAND[k][1]) + 1);
-  if (lead >= 0) { f.lead = lead; f.x = fish[lead].x + random(-12, 13); f.y = fish[lead].y + random(-5, 6); f.tx = f.x; f.ty = f.y; f.t = 0; return i; }
+  f.k = k; f.st = F_SWIM; f.left = rnd(2); f.lead = 255;
+  f.sz = 4 + rnd(5) + (rnd(6) ? 0 : rnd(3, 7));      // mostly ordinary, now and then a real lunker
+  f.y = bandDepth(k);
+  if (lead >= 0) { f.lead = lead; f.x = fish[lead].x + rnd(-12, 13); f.y = fish[lead].y + rnd(-5, 6); f.tx = f.x; f.ty = f.y; f.t = 0; return i; }
   for (uint8_t tries = 0; tries < 12; tries++) {               // somewhere you can't see (never on screen at the start), away from other fish
-    f.x = random(10, WORLD - 10);
-    if (f.x > camx - 16 && f.x < camx + 144 && (st != S_PLAY || stT < 5 || random(4))) continue;
+    f.x = rnd(10, WORLD - 10);
+    if (f.x > camx - 16 && f.x < camx + 144 && (st != S_PLAY || stT < 5 || rnd(4))) continue;
     if (!crowded(f, f.x, f.y)) break;
   }
-  if (f.y > BED - 8 && f.x > ROOF_X0 - 8 && f.x < ROOF_X1 + 8) f.x = ROOF_X1 + 20 + random(60);   // (things on the bottom stay out of the wreck)
+  if (f.y > BED - 8 && f.x > ROOF_X0 - 8 && f.x < ROOF_X1 + 8) f.x = ROOF_X1 + 20 + rnd(60);   // (things on the bottom stay out of the wreck)
   pickTarget(f); return i;
 }
 void spawnFish() {
-  uint8_t r = random(100), k;
+  uint8_t r = rnd(100), k;
   if (r < 6 && countK(K_BOOT) < 2) k = K_BOOT;
   else {                                                       // the bigger, deeper kinds show up more as you go
     static const uint8_t W0[7] PROGMEM = { 30, 25, 20, 10, 5, 10, 6 }, W4[7] PROGMEM = { 15, 17, 17, 15, 13, 12, 11 };
     uint8_t lv = level, w[7]; uint8_t tot = 0;
     for (uint8_t i = 0; i < 7; i++) { uint8_t a = pgm_read_byte(W0 + i), b = pgm_read_byte(W4 + i); w[i] = a + ((int8_t)(b - a)) * lv / 4; tot += w[i]; }
-    uint8_t q = random(tot); k = K_PIKE;
+    uint8_t q = rnd(tot); k = K_PIKE;
     for (uint8_t i = 0; i < 7; i++) { if (q < w[i]) { k = K_SUN + i; break; } q -= w[i]; }
   }
   int8_t i = addFish(k, -1);
-  if (k == K_PERCH && i >= 0) { uint8_t n = random(1, 3); while (n--) addFish(K_PERCH, i); }   // perch come in schools
+  if (k == K_PERCH && i >= 0) { uint8_t n = rnd(1, 3); while (n--) addFish(K_PERCH, i); }   // perch come in schools
 }
 void newGame() {
   for (auto& f : fish) f.st = F_GONE;
@@ -198,7 +204,7 @@ void land() {                                                  // the catch come
     say(k); msg2 = T_LB; msgLb = pgm_read_byte(LBS + k) * z / 6;   // and under it, what it weighed
     snd.tone(784, 60, 1047, 60, 1568, 160); addScore(v); pop(v);
   } else {                                                     // one you've already got: it costs you, and your streak
-    combo = 0; wantRun = 0; addScore(-100); pop(-100);
+    lose100();
     if (lines) lines--;                                        // and a line
     say(k); msg2 = T_ALREADY; snd.tone(330, 90, 220, 160);
   }
@@ -206,6 +212,13 @@ void land() {                                                  // the catch come
 }
 
 void chase(Fish& f, uint8_t t) { f.st = F_CHASE; f.t = t; f.lead = 255; }
+void toward(Fish& f, float gx, float m) { f.left = gx < f.x; if (fabs(gx - f.x) > m) f.x += f.left ? -m : m; }   // swim at m towards gx
+__attribute__((always_inline)) inline void driftY(Fish& f) { if (fabs(f.ty - f.y) > 0.3f) f.y += f.ty > f.y ? 0.25f : -0.25f; }   // ease up or down to its depth
+__attribute__((always_inline)) inline void clampY(Fish& f, int16_t lo, int16_t hi) { if (f.y < lo) f.y = lo; if (f.y > hi) f.y = hi; }   // keep it between depths lo and hi
+void wander(Fish& f) { f.st = F_SWIM; pickTarget(f); }   // back to swimming about
+void flee(Fish& f, uint8_t t, int8_t d) { f.st = F_FLEE; f.t = t; f.tx = f.x + d; f.lead = 255; }   // dart off d pixels
+void robbed(Fish& f, Fish& h, uint8_t s) {                     // a gar, pike or bass got the fish on your line, and makes off with it
+  h.st = F_GONE; hooked = -1; lose100(); say(s); snd.tone(300, 60, 200, 120); flee(f, 60, f.left ? -80 : 80); }
 void updateFish() {
   float spm = 1.0f + level * 0.06f; bool wet = lineWet() && hooked < 0 && !snapT, moving = lureMoving();
   bool still = wet && !moving, onBottom = wet && hy >= BED - 6, gentle = wet && fabs(hvx) < 0.2f;   // gentle: going straight down or up, not dragged sideways
@@ -214,79 +227,76 @@ void updateFish() {
     if ((f.k == K_BOOT || f.k == K_CHEST) && f.st != F_HOOK) { if (f.y < BED - 4) f.y += 0.6f; else f.st = F_SWIM; continue; }   // they just sink back down
     float sp = pgm_read_byte(SWIM + f.k) / 32.0f * spm;
     float dx = f.x - hx, dy = f.y - hy, ax = fabs(dx), ay = fabs(dy);
-    if (f.st == F_SWIM && wet && lineSt == L_DOWN && f.k != K_CRAW && ax < 10 && dy > 0 && dy < 14 && random(25) == 0) {   // a hook dropping on its head can startle it
-      f.st = F_FLEE; f.t = 35; f.tx = f.x + (dx > 0 ? 50 : -50); f.lead = 255; }
+    if (f.st == F_SWIM && wet && lineSt == L_DOWN && f.k != K_CRAW && ax < 10 && dy > 0 && dy < 14 && rnd(25) == 0) {   // a hook dropping on its head can startle it
+      flee(f, 35, dx > 0 ? 50 : -50); }
     if (f.st == F_SWIM && wet) {                               // how each kind reacts to your hook
       switch (f.k) {
         case K_SUN: case K_PERCH:                              // like real panfish: they hit a lure sinking or rising slowly, but one dragged sideways spooks them
-          if (!gentle && ax < 18 && ay < 12 && random(3) == 0) { f.st = F_FLEE; f.t = 50; f.tx = f.x + (dx > 0 ? 70 : -70); f.lead = 255; }
-          else if (gentle && ax < 22 && ay < 12 && random(60) == 0) chase(f, 60); break;
+          if (!gentle && ax < 18 && ay < 12 && rnd(3) == 0) flee(f, 50, dx > 0 ? 70 : -70);
+          else if (gentle && ax < 22 && ay < 12 && rnd(60) == 0) chase(f, 60); break;
         case K_TROUT:                                          // wary: a hook dragged or bobbed close by, or the boat rowing hard over them, sends them off;
-          if ((fabs(hvx) > 0.25f || fabs(bvx) > 0.7f) && ax < 22 && ay < 14 && random(6) == 0) { f.st = F_FLEE; f.t = 60; f.tx = f.x + (dx > 0 ? 90 : -90); }
-          else if (still && ax < 30 && ay < 16 && random(70) == 0) chase(f, 90); break;   // ...but they'll come to a hook left still near them
-        case K_BASS: if (moving && ax < 30 && ay < 12 && random(12) == 0) chase(f, 70); break;
-        case K_PIKE: if (moving && ax < 40 && ay < 14 && random(10) == 0) chase(f, 50); break;   // a lunge from its hiding spot
-        case K_WALL: if (ax < 22 && ay < 10 && random(gentle ? 90 : 300) == 0) chase(f, 60); break;   // eases over to a slow lure
-        case K_CAT: if (onBottom && still && ax < 40 && random(80) == 0) chase(f, 120); break;   // smells it out
+          if ((fabs(hvx) > 0.25f || fabs(bvx) > 0.7f) && ax < 22 && ay < 14 && rnd(6) == 0) flee(f, 60, dx > 0 ? 90 : -90);
+          else if (still && ax < 30 && ay < 16 && rnd(70) == 0) chase(f, 90); break;   // ...but they'll come to a hook left still near them
+        case K_BASS: if (moving && ax < 30 && ay < 12 && rnd(12) == 0) chase(f, 70); break;
+        case K_PIKE: if (moving && ax < 40 && ay < 14 && rnd(10) == 0) chase(f, 50); break;   // a lunge from its hiding spot
+        case K_WALL: if (ax < 22 && ay < 10 && rnd(gentle ? 90 : 300) == 0) chase(f, 60); break;   // eases over to a slow lure
+        case K_CAT: if (onBottom && still && ax < 40 && rnd(80) == 0) chase(f, 120); break;   // smells it out
       }
     }
     if (f.st == F_SWIM && hooked >= 0 && f.k == K_GAR && fish[hooked].k != K_GAR) {   // a gar goes after the fish on your line
       Fish& h = fish[hooked]; if (fabs(f.x - h.x) < 70 && fabs(f.y - h.y) < 30) { f.st = F_CHASE; f.t = 200; }
     }
     if (f.st == F_SWIM && hooked >= 0 && (f.k == K_PIKE || f.k == K_BASS) && fish[hooked].k <= K_PERCH) {   // a pike or bass may go for a little fish on your line
-      Fish& h = fish[hooked]; if (fabs(f.x - h.x) < 45 && fabs(f.y - h.y) < 25 && random(150) == 0) { f.st = F_STEAL; f.t = 150; f.lead = 255; }
+      Fish& h = fish[hooked]; if (fabs(f.x - h.x) < 45 && fabs(f.y - h.y) < 25 && rnd(150) == 0) { f.st = F_STEAL; f.t = 150; f.lead = 255; }
     }
     if (f.st == F_SWIM && (f.k == K_BASS || f.k == K_CAT) && (tick & 15) == (i & 15))   // bass and catfish hunt crawfish
       for (auto& c : fish) if (c.st == F_SWIM && c.k == K_CRAW && fabs(c.x - f.x) < 40 && fabs(c.y - f.y) < 20) { f.tx = c.x; f.ty = c.y; f.t = 0; break; }
     if (f.k == K_BASS || f.k == K_CAT) for (auto& c : fish) if (c.st == F_SWIM && c.k == K_CRAW && fabs(c.x - f.x) < 5 && fabs(c.y - f.y) < 4) { c.st = F_GONE; break; }   // gulp
     switch (f.st) {
       case F_STEAL: {                                          // chasing the little fish you're reeling in
-        if (hooked < 0 || fish[hooked].k > K_PERCH || !--f.t) { f.st = F_SWIM; pickTarget(f); break; }
+        if (hooked < 0 || fish[hooked].k > K_PERCH || !--f.t) { wander(f); break; }
         Fish& h = fish[hooked];
         if (fabs(f.x - h.x) < 6 && fabs(f.y - h.y) < 5) {       // got it
-          h.st = F_GONE; hooked = -1; combo = 0; wantRun = 0; addScore(-100); pop(-100);
-          say(f.k == K_PIKE ? T_PIKEGOT : T_BASSGOT); snd.tone(300, 60, 200, 120);
-          f.st = F_FLEE; f.t = 60; f.tx = f.x + (f.left ? -80 : 80); break;
+          robbed(f, h, f.k == K_PIKE ? T_PIKEGOT : T_BASSGOT); break;
         }
         float c = f.k == K_PIKE ? 2.2f : 1.8f;
-        f.left = h.x < f.x; if (fabs(h.x - f.x) > sp * c) f.x += f.left ? -sp * c : sp * c;
+        toward(f, h.x, sp * c);
         f.y += h.y > f.y ? 0.45f : -0.45f; if (f.y < 16) f.y = 16;
       } break;
       case F_CHASE: {
         float gx = hx, gy = hy;
         if (f.k == K_GAR) {
-          if (hooked < 0) { f.st = F_SWIM; pickTarget(f); break; }
+          if (hooked < 0) { wander(f); break; }
           Fish& h = fish[hooked]; gx = h.x; gy = h.y;
           if (fabs(f.x - gx) < 6 && fabs(f.y - gy) < 5) {     // it steals your fish
-            h.st = F_GONE; hooked = -1; combo = 0; wantRun = 0; addScore(-100); pop(-100);
-            say(T_GARGOT); snd.tone(300, 60, 200, 120); f.st = F_FLEE; f.t = 60; f.tx = f.x + (f.left ? -80 : 80); break;
+            robbed(f, h, T_GARGOT); break;
           }
-        } else if (!wet || !--f.t) { f.st = F_SWIM; pickTarget(f); break; }
-        else if (fabs(f.x - gx) < 12 && fabs(f.y - gy) < 8 && random(30) == 0) {   // sometimes it gets wary at the last moment and turns away
-          f.st = F_FLEE; f.t = 40; f.tx = f.x + (f.x > gx ? 50 : -50); break; }
+        } else if (!wet || !--f.t) { wander(f); break; }
+        else if (fabs(f.x - gx) < 12 && fabs(f.y - gy) < 8 && rnd(30) == 0) {   // sometimes it gets wary at the last moment and turns away
+          flee(f, 40, f.x > gx ? 50 : -50); break; }
         float c = f.k == K_PIKE ? 4.0f : f.k == K_BASS ? 2.5f : f.k == K_GAR ? 1.6f : f.k == K_CAT ? 1.5f : 1.0f;
-        f.left = gx < f.x; if (fabs(gx - f.x) > sp * c) f.x += f.left ? -sp * c : sp * c;
+        toward(f, gx, sp * c);
         f.y += gy > f.y ? 0.35f : -0.35f;
-        float lo = (f.k == K_CAT ? 48 : 16), hi = BED - 3; if (f.y < lo) f.y = lo; if (f.y > hi) f.y = hi;
+        clampY(f, f.k == K_CAT ? 48 : 16, BED - 3);
       } break;
       case F_SWIM: case F_FLEE: case F_FREE: {
-        if (f.st == F_FREE) { sp *= 2.2f; f.tx = f.x + (f.left ? -20 : 20); if (!--f.t) { f.st = F_SWIM; pickTarget(f); } }
-        else if (f.st == F_FLEE) { sp *= 2.4f; if (!--f.t) { f.st = F_SWIM; pickTarget(f); } }
+        if (f.st == F_FREE) { sp *= 2.2f; f.tx = f.x + (f.left ? -20 : 20); if (!--f.t) { wander(f); } }
+        else if (f.st == F_FLEE) { sp *= 2.4f; if (!--f.t) { wander(f); } }
         else if (f.lead != 255) {                              // in a school: keep close behind the leader
           Fish& L = fish[f.lead];
           if (L.st != F_SWIM && L.st != F_FLEE) { f.lead = 255; pickTarget(f); break; }
           f.tx = L.x + (L.left ? 7 : -7) * (1 + (i & 1)); f.ty = L.y + ((i & 2) ? 4 : -4);
-          if (fabs(f.tx - f.x) < 2) { f.left = L.left; if (fabs(f.ty - f.y) > 0.3f) f.y += f.ty > f.y ? 0.25f : -0.25f; break; }
+          if (fabs(f.tx - f.x) < 2) { f.left = L.left; driftY(f); break; }
           sp *= 1.3f;
         }
-        else if (f.t) { f.t--; if ((tick & 31) == (i & 31) && f.k != K_CRAW) f.y += random(-1, 2) * 0.5f; break; }   // idling, drifting a little
+        else if (f.t) { f.t--; if ((tick & 31) == (i & 31) && f.k != K_CRAW) f.y += rnd(-1, 2) * 0.5f; break; }   // idling, drifting a little
         if (f.k == K_SUN && f.st == F_SWIM) sp *= (tick >> 2) & 3 ? 0.4f : 2.5f;       // quick little darts
         if (f.k == K_CRAW) sp *= (tick >> 3) & 1;                                       // scuttle, stop, scuttle
         f.left = f.tx < f.x;
         if (fabs(f.tx - f.x) <= sp) { f.x = f.tx; if (f.st == F_SWIM && f.lead == 255) pickTarget(f); } else f.x += f.left ? -sp : sp;
         if (f.x < 6) { f.x = 6; f.tx = 40; } if (f.x > WORLD - 6) { f.x = WORLD - 6; f.tx = WORLD - 40; }
-        if (fabs(f.ty - f.y) > 0.3f) f.y += f.ty > f.y ? 0.25f : -0.25f;
-        float lo = pgm_read_byte(&BAND[f.k][0]) - 4, hi = pgm_read_byte(&BAND[f.k][1]) + 2; if (hi > BED - 3) hi = BED - 3; if (f.y < lo) f.y = lo; if (f.y > hi) f.y = hi;
+        driftY(f);
+        int16_t hi = pgm_read_byte(&BAND[f.k][1]) + 2; clampY(f, pgm_read_byte(&BAND[f.k][0]) - 4, hi > BED - 3 ? BED - 3 : hi);
       } break;
       case F_HOOK: {                                           // hooked by the mouth: its nose stays on the hook and it thrashes, swinging its tail side to side
         if ((tick & 15) == 0) f.left = !f.left;
@@ -304,7 +314,7 @@ void updateFish() {
     if (!countK(want)) addFish(want, -1);                    // (and makes sure there's one out there)
   }
   if (chestT) chestT--;                                        // now and then a treasure chest lies on the bottom
-  else { chestT = random(1800, 3000); if (!countK(K_CHEST)) addFish(K_CHEST, -1); }
+  else { chestT = rnd(1800, 3000); if (!countK(K_CHEST)) addFish(K_CHEST, -1); }
 }
 // Snags: sunken logs lying at an angle on the bottom. Get the hook caught on one and
 // the line's gone, like a real snag.
@@ -328,14 +338,14 @@ void drawSnags(int16_t sy) {
 void updateHazards() {
   updateSnags();
   do { Turtle& t = turtle[0];                                      // the snapping turtle plods along the bottom
-    if (!t.on) { if ((tick & 511) == 300) { t.on = true; t.left = random(2); t.x = t.left ? WORLD + 12 : -12; t.t = 0; } continue; }
+    if (!t.on) { if ((tick & 511) == 300) { t.on = true; t.left = rnd(2); t.x = t.left ? WORLD + 12 : -12; t.t = 0; } continue; }
     if (lineWet() && onFloor && fabs(hx - t.x) < 50) { t.t = 0; t.left = hx < t.x; }   // a lure sitting on the bottom draws it over
-    if (t.t) t.t--; else { t.x += t.left ? -0.15f : 0.15f; if (random(400) == 0) t.t = random(60, 200); }
+    if (t.t) t.t--; else { t.x += t.left ? -0.15f : 0.15f; if (rnd(400) == 0) t.t = rnd(60, 200); }
     if (t.x < -20 || t.x > WORLD + 20) { t.on = false; continue; }
     if (lineWet() && !snapT && fabs(hx - t.x) < 11 && hy > BED - 12) { snap(T_TURTLE); snd.tone(120, 80, 90, 160); }
   } while (0);
   if (spoolT) spoolT--;                                        // a spool of line sinks down now and then
-  else if (!spool.on) { spool = { camx + random(20, 108), (float)SURF + 2, 0, true }; if (spool.x > ROOF_X0 - 6 && spool.x < ROOF_X1 + 6) spool.x = ROOF_X1 + 12; spoolT = random(2400, 3600); }
+  else if (!spool.on) { spool = { camx + rnd(20, 108), (float)SURF + 2, 0, true }; if (spool.x > ROOF_X0 - 6 && spool.x < ROOF_X1 + 6) spool.x = ROOF_X1 + 12; spoolT = rnd(2400, 3600); }
   if (spool.on) { spool.y += 0.18f; if (spool.y > BED - 4) spool.on = false; }   // it sinks, and once it's on the bottom it's gone
 }
 float depthAt(float x) { return (x > ROOF_X0 && x < ROOF_X1) ? ROOF_Y : BED - 1; }
@@ -393,7 +403,8 @@ void updateLine() {
   } else if (lineSt == L_UP) {
     float spd = 0.77f;
     if (hooked >= 0) {
-      uint8_t w = pgm_read_byte(WEIGHT + fish[hooked].k); spd = w == 1 ? 0.45f : w == 2 ? 0.32f : w == 3 ? 0.21f : w == 4 ? 0.16f : 0.11f;
+      static const float REEL[6] PROGMEM = { 0.11f, 0.45f, 0.32f, 0.21f, 0.16f, 0.11f };   // how fast you reel in, by how heavy the catch is
+      uint8_t w = pgm_read_byte(WEIGHT + fish[hooked].k); spd = pgm_read_float(REEL + w);
       if ((tick & 7) == 0) snd.tone(250 + (int16_t)lineLen * 8, 25);
       if (w >= 3) bvx += fish[hooked].left ? -0.03f : 0.03f;    // a big one tugs the boat about
     } else if ((tick & 7) == 0) snd.tone(1800, 4);             // an empty reel just clicks
@@ -510,8 +521,8 @@ void drawPlay() {
     if (combo > 1) { at(1, 7); pc('X'); pn(combo); } sm_ = false; }   // your streak, under the score
   at(128 - (nlen(caught) + 3) * 6, 15); pn(caught); pc('/'); pn(DERBY);   // the derby: how many of Larry's fish so far (under the card)
   spr(126 - sw(want), 1, want, 2 + ((tick >> 4) & 1));        // a fish you still need, top right, drawn straight over the sky
-  if (popT) { popT--; int16_t y = popY - (45 - popT) / 4; int16_t w = (nlen(popV < 0 ? -popV : popV) + 1) * 6; int16_t x = SX(popX) - w / 2; if (x < 0) x = 0; if (x + w > 127) x = 127 - w;
-    ab.fillRect(x - 1, y - 1, w + 1, 9, BLACK); at(x, y); pc(popV < 0 ? '-' : '+'); pn(popV < 0 ? -popV : popV); }
+  if (popT) { popT--; int16_t y = popY - (45 - popT) / 4; uint32_t pa = popV < 0 ? -popV : popV; int16_t w = (nlen(pa) + 1) * 6; int16_t x = SX(popX) - w / 2; if (x < 0) x = 0; if (x + w > 127) x = 127 - w;
+    ab.fillRect(x - 1, y - 1, w + 1, 9, BLACK); at(x, y); pc(popV < 0 ? '-' : '+'); pn(pa); }
   if (msgT) { msgT--; if (msgT > 10 || (msgT & 2)) { boxText(64, 30, msg); if (msg2) boxText(64, 45, msg2); } }
   if (st == S_PLAY && !casts && stT < 128 && (stT & 32)) boxText(64, 30, T_HOLD);   // first time: how to play (two blinks, then gone)
 }

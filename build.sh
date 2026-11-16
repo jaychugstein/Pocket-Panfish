@@ -13,7 +13,7 @@ SK=PocketPanfish; B=build; rm -rf $B; mkdir -p $B/core $B/lib
 DEFS="-mmcu=atmega32u4 -DF_CPU=16000000L -DARDUINO=10819 -DARDUINO_AVR_LEONARDO -DARDUINO_ARCH_AVR -DUSB_VID=0x2341 -DUSB_PID=0x8036 -DARDUBOY_10"
 INC="-I$CORE -I$VAR -I$A2 -I$FX -I$AT -I$EE -I$SK"
 CF="-Os -w -ffunction-sections -fdata-sections -flto -fno-fat-lto-objects"
-CXF="$CF -fno-tree-pre -fno-code-hoisting -mstrict-X -fno-ipa-sra -fno-tree-loop-im -fno-inline-functions-called-once -fno-reorder-blocks -fno-align-functions -fno-tree-loop-optimize -mcall-prologues -fno-inline-small-functions -mrelax -fno-split-wide-types -std=gnu++17 -fpermissive -fno-exceptions -fno-threadsafe-statics"
+CXF="$CF -mstrict-X -fno-ipa-sra -fno-inline-functions-called-once -fno-reorder-blocks -fno-align-functions -mcall-prologues -fno-inline-small-functions -mrelax -fno-split-wide-types -std=gnu++17 -fpermissive -fno-exceptions -fno-threadsafe-statics -fno-move-loop-invariants"
 for f in $CORE/*.c; do avr-gcc $CF $DEFS $INC -c $f -o $B/core/$(basename $f).o; done
 for f in $CORE/*.cpp; do avr-g++ $CXF $DEFS $INC -c $f -o $B/core/$(basename $f).o; done
 for f in $CORE/*.S; do avr-gcc -x assembler-with-cpp -flto $DEFS $INC -c $f -o $B/core/$(basename $f).o; done
