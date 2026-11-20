@@ -537,7 +537,7 @@ void titleScreen() {                                           // underwater: we
     if (i & 1) x = 95 - x;                                       // (the middle one swims the other way)
     spr(x, 4 + i * 13, k, (i << 1 & 2) | ((uint8_t)stT >> 3 & 1));
   }
-  FX::drawBitmap(64 - TLOGO_W / 2, 3, FX_TLOGO, 0, dbmMasked); // POCKET PANFISH (the hook on its line and the PRESS sign are in the picture)
+  FX::drawBitmap(64 - TLOGO_W / 2, 1, FX_TLOGO, 0, dbmMasked); // POCKET PANFISH (the hook on its line and the PRESS sign are in the picture)
   if (stT == 20) snd.tones(WINSONG);                          // a fanfare to start (the same one as winning the derby)
   if (AB_JUST) { randomSeed(micros()); st = S_SOUND; stT = 0; }
 }
